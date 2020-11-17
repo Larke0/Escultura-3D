@@ -27,7 +27,7 @@ protected:
 	float r, g, b, a; // Current drawing color
 	int i, j, k;
 public:
-	Sculptor(int _nx, int _ny, int _nz);
+	Sculptor(int _nx, int _ny, int _nz, const char* filename, bool a);
 	~Sculptor();
 	void setColor(float r_, float g_, float b_, float alpha_);
 	void putVoxel(int x, int y, int z);
@@ -40,30 +40,71 @@ public:
 	void cutEllipsoid(int xcenter, int ycenter, int zcenter, int rx, int ry, int rz);
 	void writeOFF(const char* filename);
 	void freemem();
+	void read(int x, int y, int z);
 	void show();
+	void save(const char* filename);
 };
 
-Sculptor::Sculptor(int _nx, int _ny, int _nz) {
+
+
+
+
+
+Sculptor::Sculptor(int _nx, int _ny, int _nz, const char* filename, bool load) {
 	int i, j, k;
-	nx = _nx; ny = _ny; nz = _nz;
-	v = (Voxel***)malloc(_nx * sizeof(Voxel**));
-	if (v == NULL) {
-		std::cout << "Out of memory";
-		exit(0);
-	}
-	for (i = 0; i < _nx; i++) {
-		v[i] = (Voxel**)malloc(_ny * sizeof(Voxel*));
-		for (j = 0; j < _ny; j++) {
-			v[i][j] = (Voxel*)malloc(_nz * sizeof(Voxel));
+	if (load) {
+		fstream file;
+		file.open(filename, std::ios::in);
+		file >> nx >> ny >> nz;
+		std::cout << nx << " " << ny << " " << nz << "\n";
+		//------------------------------------------------------
+		v = (Voxel***)malloc(nx * sizeof(Voxel**));
+		if (v == NULL) {
+			std::cout << "Out of memory";
+			exit(0);
 		}
+		for (i = 0; i < nx; i++) {
+			v[i] = (Voxel**)malloc(ny * sizeof(Voxel*));
+			for (j = 0; j < ny; j++) {
+				v[i][j] = (Voxel*)malloc(nz * sizeof(Voxel));
+			}
+		}
+		//-----------------------------------------------------
+
+
+		for (i = 0; i < nx; i++) {
+			for (j = 0; j < ny; j++) {
+				for (k = 0; k < nz; k++) {
+					file >> v[i][j][k].isOn;
+					if (v[i][j][k].isOn) { file >> v[i][j][k].r >> v[i][j][k].g >> v[i][j][k].b >> v[i][j][k].a; }
+				}
+			}
+		}
+
 	}
-	for (i = 0; i < nx; i++) {
-		for (j = 0; j < ny; j++) {
-			for (k = 0; k < nz; k++) {
-				v[i][j][k].isOn = 0;
+	else {
+		nx = _nx; ny = _ny; nz = _nz;
+
+		v = (Voxel***)malloc(nx * sizeof(Voxel**));
+		if (v == NULL) {
+			std::cout << "Out of memory";
+			exit(0);
+		}
+		for (i = 0; i < nx; i++) {
+			v[i] = (Voxel**)malloc(ny * sizeof(Voxel*));
+			for (j = 0; j < ny; j++) {
+				v[i][j] = (Voxel*)malloc(nz * sizeof(Voxel));
+			}
+		}
+		for (i = 0; i < nx; i++) {
+			for (j = 0; j < ny; j++) {
+				for (k = 0; k < nz; k++) {
+					v[i][j][k].isOn = 0;
+				}
 			}
 		}
 	}
+
 };
 
 Sculptor::~Sculptor(void) {
@@ -72,19 +113,19 @@ Sculptor::~Sculptor(void) {
 
 
 
-void Sculptor::setColor(float r_, float g_, float b_, float alpha_) {
-	r = r_; g = g_; b = b_; a = alpha_;
-};
-
 void Sculptor::putVoxel(int x, int y, int z) {
 	if ((0 <= x) && (x < nx) && (0 <= y) && (y < ny) && (0 <= z) && (z < nz)) {
 		v[x][y][z].isOn = true;
 		v[x][y][z].r = r; v[x][y][z].g = g; v[x][y][z].b = b; v[x][y][z].a = a;
 	}
 };
+
 void Sculptor::cutVoxel(int x, int y, int z) {
-	v[x][y][z].isOn = false;
+	if ((0 <= x) && (x < nx) && (0 <= y) && (y < ny) && (0 <= z) && (z < nz)) {
+		v[x][y][z].isOn = false;
+	}
 };
+
 void Sculptor::putBox(int x0, int x1, int y0, int y1, int z0, int z1) {
 	for (i = x0; i <= x1; i++) {
 		for (j = y0; j <= y1; j++) {
@@ -97,6 +138,7 @@ void Sculptor::putBox(int x0, int x1, int y0, int y1, int z0, int z1) {
 		}
 	}
 };
+
 void Sculptor::cutBox(int x0, int x1, int y0, int y1, int z0, int z1) {
 	for (i = x0; i <= x1; i++) {
 		for (j = y0; j <= y1; j++) {
@@ -108,6 +150,7 @@ void Sculptor::cutBox(int x0, int x1, int y0, int y1, int z0, int z1) {
 		}
 	}
 };
+
 void Sculptor::putSphere(int xcenter, int ycenter, int zcenter, int radius) {
 	for (i = xcenter - (radius); i <= xcenter + radius; i++) {
 		for (j = ycenter - radius; j <= ycenter + radius; j++) {
@@ -122,6 +165,7 @@ void Sculptor::putSphere(int xcenter, int ycenter, int zcenter, int radius) {
 		}
 	}
 };
+
 void Sculptor::cutSphere(int xcenter, int ycenter, int zcenter, int radius) {
 	for (i = xcenter - (radius); i <= xcenter + radius; i++) {
 		for (j = ycenter - radius; j <= ycenter + radius; j++) {
@@ -135,6 +179,7 @@ void Sculptor::cutSphere(int xcenter, int ycenter, int zcenter, int radius) {
 		}
 	}
 };
+
 void Sculptor::putEllipsoid(int xcenter, int ycenter, int zcenter, int rx, int ry, int rz) {
 	for (i = xcenter - rx; i <= xcenter + rx; i++) {
 		for (j = ycenter - ry; j <= ycenter + ry; j++) {
@@ -149,6 +194,7 @@ void Sculptor::putEllipsoid(int xcenter, int ycenter, int zcenter, int rx, int r
 		}
 	}
 };
+
 void Sculptor::cutEllipsoid(int xcenter, int ycenter, int zcenter, int rx, int ry, int rz) {
 	for (i = xcenter - rx; i <= xcenter + rx; i++) {
 		for (j = ycenter - ry; j <= ycenter + ry; j++) {
@@ -175,8 +221,6 @@ void Sculptor::freemem(void) {
 	free(v); std::cout << "Finalizado\n\n";
 }
 
-
-
 void Sculptor::show(void) {
 	int i, j, k;
 	for (k = 0; k < nz; k++) {
@@ -192,8 +236,6 @@ void Sculptor::show(void) {
 		}
 	}
 }
-
-
 
 void Sculptor::writeOFF(const char* filename) {
 	int i, k, j, n = 0;
@@ -345,18 +387,43 @@ void Sculptor::writeOFF(const char* filename) {
 
 
 
-					nf += 6;
-					if (v[i][j][k].r == 0) { std::cout << "\nv[" << i << "][" << j << "][" << k << "]\n"; }
 					}
 				}
 			}
 		}
-	std::cout << "\nSalvo nc=" << nf <<"\n";
+		std::cout << "\nSalvo com sucesso\n";
 	}
 
+void Sculptor::save(const char* filename) {
+		int i, j, k;
+		fstream file;
+		file.open(filename, std::ios::out);
+		file << nx << " " << ny << " " << nz << "\n";
+		for (i = 0; i < nx; i++) {
+			for (j = 0; j < ny; j++) {
+				for (k = 0; k < nz; k++) {
+					file << v[i][j][k].isOn<< " ";
+					if (v[i][j][k].isOn) { file << v[i][j][k].r << " " << v[i][j][k].g << " " << v[i][j][k].b << " " << v[i][j][k].a; }
+					file << "\n";
+				}
+			}
+		}
+		std::cout << "\nSalvo com sucesso\n";
+	}
 
+void Sculptor::read(int x, int y, int z) {
+		std::cout<<"Current color is: R=" << r << " G=" <<g << " B=" << b << " a=" << a << "\n";
+		std::cout << "Data on " << x << " " << y << " " << z << "is: R=" << v[x][y][z].r << " G=" << v[x][y][z].g << " B=" << v[x][y][z].b << " a="<< v[x][y][z].a << "\n";
+	}
 
-
+void Sculptor::setColor(float r_, float g_, float b_, float alpha_) {
+	std::cout << "R=" << r_ << " G=" << g_ << " B=" << b_ << " a=" << alpha_ << "\n";
+	if (r_ < 0) { r_ = 0; }if (r_ >= 255) { r_ = 255; }
+	if (g_ < 0) { g_ = 0; }if (g_ >= 255) { g_ = 255; }
+	if (b_ < 0) { b_ = 0; }if (b_ >= 255) { b_ = 255; }
+	if (alpha_ < 0) { alpha_ = 0; }if (alpha_ >= 1) { alpha_ = 1; }
+	r = r_; g = g_; b = b_; a = alpha_;
+};
 
 
 
